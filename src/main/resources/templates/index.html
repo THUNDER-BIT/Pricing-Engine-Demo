@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Revenue Pricing Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            border-radius: 15px;
+            border: none;
+        }
+        
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow-lg">
+                    <div class="card-header bg-dark text-white p-4">
+                        <h2 class="mb-0 text-center">Revenue Pricing Engine</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h4>Contract Segments</h4>
+                            <button class="btn btn-outline-success" onclick="addRow()">+ Add New Segment</button>
+                        </div>
+
+                        <table class="table table-hover" id="rampTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Monthly Price ($)</th>
+                                    <th>Duration (Months)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="segmentsBody">
+                                <tr>
+                                    <td><input type="number" class="form-control price-input" value="1000"></td>
+                                    <td><input type="number" class="form-control duration-input" value="12"></td>
+                                    <td><button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">Remove</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button class="btn btn-primary btn-lg" onclick="performCalculation()">Calculate Total Contract Value</button>
+                        </div>
+
+                        <div id="resultBox" class="mt-4 p-4 border rounded bg-white text-center d-none">
+                            <h5 class="text-muted">Calculated TCV</h5>
+                            <h1 class="display-4 text-primary" id="tcvDisplay">$0.00</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addRow() {
+            const tbody = document.getElementById('segmentsBody');
+            const newRow = `
+                <tr>
+                    <td><input type="number" class="form-control price-input" placeholder="0.00"></td>
+                    <td><input type="number" class="form-control duration-input" placeholder="0"></td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()">Remove</button></td>
+                </tr>`;
+            tbody.insertAdjacentHTML('beforeend', newRow);
+        }
+
+        async function performCalculation() {
+            const prices = document.getElementsByClassName('price-input');
+            const durations = document.getElementsByClassName('duration-input');
+            const payload = [];
+
+            for (let i = 0; i < prices.length; i++) {
+                payload.push({
+                    monthlyPrice: prices[i].value,
+                    durationMonths: durations[i].value
+                });
+            }
+
+            try {
+                const response = await fetch('/api/v1/billing/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const total = await response.json();
+                    const display = document.getElementById('tcvDisplay');
+                    const box = document.getElementById('resultBox');
+
+                    display.innerText = '$' + new Intl.NumberFormat('en-US', {
+                        minimumFractionDigits: 2
+                    }).format(total);
+                    box.classList.remove('d-none');
+                }
+            } catch (error) {
+                alert("Error connecting to the Pricing Engine!");
+            }
+        }
+    </script>
+</body>
+
+</html>
